@@ -38,3 +38,5 @@ class ResNet9(nn.Module):
         out = self.res2(out) + out
         out = self.classifier(out)
         return out
+    
+    

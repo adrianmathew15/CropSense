@@ -1,6 +1,5 @@
-# Importing essential libraries and modules
+from flask import Flask, render_template, request, Markup, jsonify
 
-from flask import Flask, render_template, request, Markup
 import numpy as np
 import pandas as pd
 from utils.disease import disease_dic
@@ -13,11 +12,13 @@ import torch
 from torchvision import transforms
 from PIL import Image
 from utils.model import ResNet9
-# ==============================================================================================
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from utils.nutrient import nutrient_dic
 
-# -------------------------LOADING THE TRAINED MODELS -----------------------------------------------
 
-# Loading plant disease classification model
+#LOADING THE TRAINED MODELS 
+#Loading plant disease classification model
 
 disease_classes = ['Apple___Apple_scab',
                    'Apple___Black_rot',
@@ -66,17 +67,11 @@ disease_model.eval()
 
 
 # Loading crop recommendation model
-
 crop_recommendation_model_path = 'models/RandomForest.pkl'
 crop_recommendation_model = pickle.load(
     open(crop_recommendation_model_path, 'rb'))
 
-
-# =========================================================================================
-
 # Custom functions for calculations
-
-
 def weather_fetch(city_name):
     """
     Fetch and returns the temperature and humidity of a city
@@ -89,7 +84,6 @@ def weather_fetch(city_name):
     complete_url = base_url + "appid=" + api_key + "&q=" + city_name
     response = requests.get(complete_url)
     x = response.json()
-
     if x["cod"] != "404":
         y = x["main"]
 
@@ -98,7 +92,6 @@ def weather_fetch(city_name):
         return temperature, humidity
     else:
         return None
-
 
 def predict_image(img, model=disease_model):
     """
@@ -122,52 +115,61 @@ def predict_image(img, model=disease_model):
     # Retrieve the class label
     return prediction
 
-# ===============================================================================================
-# ------------------------------------ FLASK APP -------------------------------------------------
+
+#Loading nutrient model
+try:
+    model = load_model('utils/nutrient_model.h5')
+except Exception as e:
+    print(f"Error loading model: {e}")
+
+# Prediction function
+def predict_nutrient(image_path):
+    img = load_img(image_path, target_size=(150, 150))
+    img_array = img_to_array(img) / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
+
+    predictions = model.predict(img_array)
+    classes = ['Nitrogen', 'Phosphorus', 'Potassium']
+    predicted_class = classes[np.argmax(predictions)]
+    confidence = np.max(predictions) * 100
+    return predicted_class, confidence
 
 
+#FLASK APP 
 app = Flask(__name__)
-
 # render home page
-
-
 @ app.route('/')
 def home():
-    title = 'Harvestify - Home'
+    title = 'Crop Sense - Home'
     return render_template('index.html', title=title)
 
 # render crop recommendation form page
-
-
 @ app.route('/crop-recommend')
 def crop_recommend():
-    title = 'Harvestify - Crop Recommendation'
+    title = 'Crop Sense - Crop Recommendation'
     return render_template('crop.html', title=title)
 
 # render fertilizer recommendation form page
-
-
 @ app.route('/fertilizer')
 def fertilizer_recommendation():
-    title = 'Harvestify - Fertilizer Suggestion'
+    title = 'Crop Sense - Fertilizer Suggestion'
 
     return render_template('fertilizer.html', title=title)
 
+# Route for nutrient deficiency detection
+@app.route('/nutrient')
+def nutrient_deficiency():
+    title = 'Crop Sense - Nutrient Deficiency Detection'
+    return render_template('nutrient.html', title=title)
+
+
 # render disease prediction input page
 
-
-
-
-# ===============================================================================================
-
 # RENDER PREDICTION PAGES
-
 # render crop recommendation result page
-
-
 @ app.route('/crop-predict', methods=['POST'])
 def crop_prediction():
-    title = 'Harvestify - Crop Recommendation'
+    title = 'Crop Sense - Crop Recommendation'
 
     if request.method == 'POST':
         N = int(request.form['nitrogen'])
@@ -186,17 +188,13 @@ def crop_prediction():
             final_prediction = my_prediction[0]
 
             return render_template('crop-result.html', prediction=final_prediction, title=title)
-
         else:
-
             return render_template('try_again.html', title=title)
 
 # render fertilizer recommendation result page
-
-
 @ app.route('/fertilizer-predict', methods=['POST'])
 def fert_recommend():
-    title = 'Harvestify - Fertilizer Suggestion'
+    title = 'Crop Sense - Fertilizer Suggestion'
 
     crop_name = str(request.form['cropname'])
     N = int(request.form['nitrogen'])
@@ -240,7 +238,7 @@ def fert_recommend():
 
 @app.route('/disease-predict', methods=['GET', 'POST'])
 def disease_prediction():
-    title = 'Harvestify - Disease Detection'
+    title = 'Crop Sense - Disease Detection'
 
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -259,7 +257,71 @@ def disease_prediction():
             pass
     return render_template('disease.html', title=title)
 
+# # Dictionary with detailed nutrient information
+# nutrient_info = {
+#     'Nitrogen': {
+#         'description': 'Nitrogen is essential for the growth of plants and plays a key role in photosynthesis.',
+#         'recommendation': 'Increase nitrogen-rich fertilizers such as urea, ammonium nitrate, etc.'
+#     },
+#     'Phosphorus': {
+#         'description': 'Phosphorus is crucial for energy transfer and photosynthesis in plants.',
+#         'recommendation': 'Use phosphorus-rich fertilizers such as superphosphate or bone meal.'
+#     },
+#     'Potassium': {
+#         'description': 'Potassium helps plants build resistance to diseases and aids in root development.',
+#         'recommendation': 'Use potassium-rich fertilizers like potassium chloride or potassium sulfate.'
+#     }
+# }
 
-# ===============================================================================================
+@app.route('/nutrient', methods=['GET', 'POST'])
+def nutrient_prediction():
+    title = 'Crop Sense - Nutrient Deficiency Detection'
+
+    if request.method == 'GET':
+        return render_template('nutrient.html', title=title)
+
+    if request.method == 'POST':
+        try:
+            # Collect the uploaded image for nutrient analysis
+            if 'image' not in request.files:
+                raise ValueError("No file part in the request")
+            
+            file = request.files['image']
+            if file.filename == '':
+                raise ValueError("No file selected for uploading")
+            
+            # Save the uploaded image temporarily
+            image_path = 'temp_image.jpg'
+            file.save(image_path)
+
+            # Call the prediction function for nutrient deficiency
+            predicted_class, confidence = predict_nutrient(image_path)
+
+            # Get detailed information from nutrient_dic for the predicted nutrient
+            nutrient_details = nutrient_dic.get(predicted_class, "No details available.")
+            
+            # Use Markup to format the result directly and pass it to the result page
+            result = Markup(f"""
+                <p><b>{predicted_class}</b></p>
+                <p><i>{nutrient_details}</i></p>
+                <p><b>Confidence:</b> {confidence:.2f}%</p>
+            """)
+
+            # Render the result template with formatted result
+            return render_template(
+                'nutrient-result.html',
+                result=result,  # Pass the formatted result directly
+                title=title
+            )
+        except Exception as e:
+            print(f"Error: {e}")
+            return render_template(
+                'nutrient.html',
+                title=title,
+                error="An error occurred while processing the image. Please try again."
+            )
+
+
 if __name__ == '__main__':
     app.run(debug=False)
+    

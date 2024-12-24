@@ -3,7 +3,7 @@ body {
     margin: 0;
     font-size: 100%;
     background: #fff;
-	font-family: 'Thasadith', sans-serif;
+	font-family: 'Open Sans', sans-serif;
 }
 
 html {
@@ -16,7 +16,7 @@ body a {
     -moz-transition: 0.5s all;
     -o-transition: 0.5s all;
     -ms-transition: 0.5s all;
-	font-family: 'Thasadith', sans-serif;
+	font-family: 'Open Sans', sans-serif;
 }
 
 body img {
