@@ -16,6 +16,8 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from utils.nutrient import nutrient_dic
 
+from flask import Flask, render_template, request, redirect, url_for, session
+from flask_sqlalchemy import SQLAlchemy
 
 #LOADING THE TRAINED MODELS 
 #Loading plant disease classification model
@@ -137,8 +139,79 @@ def predict_nutrient(image_path):
 
 #FLASK APP 
 app = Flask(__name__)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = 'your_secret_key'  # Set a secret key for session management
+
+db = SQLAlchemy(app)
+
+# User model
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), nullable=False, unique=True)
+    password = db.Column(db.String(100), nullable=False)
+
+@app.before_first_request
+def create_tables():
+    db.create_all()
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        if 'signup' in request.form:  # Sign up form submission
+            name = request.form['name']
+            email = request.form['email']
+            password = request.form['password']
+
+            # Check if the email already exists
+            existing_user = User.query.filter_by(email=email).first()
+            if existing_user:
+                return "Email already registered! Please log in."
+
+            new_user = User(name=name, email=email, password=password)
+            db.session.add(new_user)
+            db.session.commit()
+
+            return redirect(url_for('index'))
+
+        elif 'login' in request.form:  # Login form submission
+            email = request.form['email']
+            password = request.form['password']
+
+            user = User.query.filter_by(email=email).first()
+
+            if user and user.password == password:
+                session['user_id'] = user.id  # Store user ID in session
+                session['user_name'] = user.name  # Store user name in session
+                return render_template('index.html', message="Login successful!")
+            else:
+                return render_template('signup.html', message="Invalid credentials. Please try again.")
+
+    return render_template('signup.html')
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user_id' in session:
+        return f"Hello, {session['user_name']}! Welcome to your dashboard."
+    else:
+        return redirect(url_for('index'))
+    
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)  # Remove user_id if it exists
+    session.pop('user_name', None)  # Remove user_name if it exists
+    return redirect(url_for('index'))  # Redirect to the login page
+
+# @app.route('/logout')
+# def logout():
+#     session.clear()  # Clear session data
+#     return redirect(url_for('login'))  # Redirect to login page
+
+
 # render home page
-@ app.route('/')
+@ app.route('/home')
 def home():
     title = 'Crop Sense - Home'
     return render_template('index.html', title=title)
@@ -325,3 +398,5 @@ def nutrient_prediction():
 if __name__ == '__main__':
     app.run(debug=False)
     
+
+

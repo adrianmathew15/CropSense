@@ -182,7 +182,14 @@ Smartphone Compatible web template, free webdesigns for Nokia, Samsung, LG, Sony
 					</li>
 					<li class="nav-item">
 						<a class="nav-link" href="{{ url_for('nutrient_deficiency') }}">Nutrient</a>
-					</li>					
+					</li>	
+					<!-- Logout Icon -->
+					<li class="nav-item">
+						<a class="nav-link" href="{{ url_for('index') }}">
+							<img src="{{ url_for('static', filename='images/logout_icon.png') }}" alt="Logout" title="Logout"
+								style="width: 30px; height: 30px;">
+						</a>
+					</li>				
 				</ul>
 			</div>
 		</div>
