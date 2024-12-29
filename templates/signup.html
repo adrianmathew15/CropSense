@@ -5,7 +5,8 @@
     <script src="https://kit.fontawesome.com/0287f3894d.js" crossorigin="anonymous"></script>
     <style>
         /* Your existing styles */
-        * {
+                /* Your existing styles */
+                * {
             margin: 0;
             padding: 0;
             font-family: 'Poppins', 'sans-serif';
@@ -112,31 +113,32 @@
             background: #eaeaea;
             color: #555;
         }
+        /*...existing styles here...*/
     </style>
 </head>
 <body>
     <div class="container">
         <div class="form-box">
             <h1 id="title">Sign Up</h1>
-            <form method="POST">
+            <form method="POST" id="authForm">
                 <div class="input-group">
                     <div class="input-field" id="nameField">
                         <i class="fa-solid fa-user"></i>
-                        <input type="text" name="name" placeholder="Name" autocomplete="off">
+                        <input type="text" name="name" id="nameInput" placeholder="Name" autocomplete="off">
                     </div>
                     <div class="input-field">
                         <i class="fa-solid fa-envelope"></i>
-                        <input type="email" name="email" placeholder="Email" autocomplete="off">
+                        <input type="email" name="email" id="emailInput" placeholder="Email" autocomplete="off">
                     </div>
                     <div class="input-field">
                         <i class="fa-solid fa-lock"></i>
-                        <input type="password" name="password" placeholder="Password" autocomplete="off">
+                        <input type="password" name="password" id="passwordInput" placeholder="Password" autocomplete="off">
                     </div>
                     <p>Forgot Password? <a href="#">Click Here!</a></p>
                 </div>
                 <div class="btn-field">
-                    <button type="submit" name="signup" id="signupBtn">Sign Up</button>
-                    <button type="submit" name="login" id="signinBtn" class="disable">Sign In</button>
+                    <button type="button" name="signup" id="signupBtn">Sign Up</button>
+                    <button type="button" name="login" id="signinBtn" class="disable">Sign In</button>
                 </div>
             </form>
         </div>
@@ -148,24 +150,69 @@
     {% endif %}
 
     <script>
-        let signupBtn = document.getElementById("signupBtn");
-        let signinBtn = document.getElementById("signinBtn");
-        let nameField = document.getElementById("nameField");
-        let title = document.getElementById("title");
+        const signupBtn = document.getElementById("signupBtn");
+        const signinBtn = document.getElementById("signinBtn");
+        const nameField = document.getElementById("nameField");
+        const title = document.getElementById("title");
+        const form = document.getElementById("authForm");
 
-        signinBtn.onclick = function() {
+        signinBtn.onclick = function () {
             nameField.style.maxHeight = "0";
             title.innerHTML = "Sign In";
             signupBtn.classList.add("disable");
             signinBtn.classList.remove("disable");
-        }
 
-        signupBtn.onclick = function() {
+            // Update form to indicate login
+            if (!document.getElementById('actionType')) {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'actionType';
+                hiddenInput.id = 'actionType';
+                hiddenInput.value = 'login';
+                form.appendChild(hiddenInput);
+            } else {
+                document.getElementById('actionType').value = 'login';
+            }
+        };
+
+        signupBtn.onclick = function () {
             nameField.style.maxHeight = "60px";
             title.innerHTML = "Sign Up";
             signupBtn.classList.remove("disable");
             signinBtn.classList.add("disable");
-        }
+
+            // Update form to indicate signup
+            if (!document.getElementById('actionType')) {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'actionType';
+                hiddenInput.id = 'actionType';
+                hiddenInput.value = 'signup';
+                form.appendChild(hiddenInput);
+            } else {
+                document.getElementById('actionType').value = 'signup';
+            }
+        };
+
+        // Form submission logic
+        signupBtn.addEventListener("click", function () {
+            const name = document.getElementById("nameInput").value.trim();
+            const email = document.getElementById("emailInput").value.trim();
+            const password = document.getElementById("passwordInput").value.trim();
+
+            if (name && email && password) {
+                form.submit();
+            }
+        });
+
+        signinBtn.addEventListener("click", function () {
+            const email = document.getElementById("emailInput").value.trim();
+            const password = document.getElementById("passwordInput").value.trim();
+
+            if (email && password) {
+                form.submit();
+            }
+        });
 
         // Displaying alert message if exists
         const alertMessage = document.getElementById("alertMessage");

@@ -18,6 +18,7 @@ from utils.nutrient import nutrient_dic
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
+import traceback
 
 #LOADING THE TRAINED MODELS 
 #Loading plant disease classification model
@@ -157,39 +158,52 @@ class User(db.Model):
 def create_tables():
     db.create_all()
 
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        if 'signup' in request.form:  # Sign up form submission
-            name = request.form['name']
-            email = request.form['email']
-            password = request.form['password']
+        action_type = request.form.get('actionType')  # Get the hidden field value
+        if action_type == 'signup':  # Sign up form submission
+            try:
+                name = request.form['name']
+                email = request.form['email']
+                password = request.form['password']
 
-            # Check if the email already exists
-            existing_user = User.query.filter_by(email=email).first()
-            if existing_user:
-                return "Email already registered! Please log in."
+                if not name or not email or not password:
+                    return render_template('signup.html', message="All fields are required.")
 
-            new_user = User(name=name, email=email, password=password)
-            db.session.add(new_user)
-            db.session.commit()
+                # Check if the email already exists
+                existing_user = User.query.filter_by(email=email).first()
+                if existing_user:
+                    return render_template('signup.html', message="Email already registered! Please log in.")
 
-            return redirect(url_for('index'))
-
-        elif 'login' in request.form:  # Login form submission
+                # Add new user
+                new_user = User(name=name, email=email, password=password)
+                db.session.add(new_user)
+                db.session.commit()
+                return render_template('signup.html', message="Sign up successful! Please log in.")
+            except Exception as e:
+                db.session.rollback()  # Rollback transaction on error
+                print(f"Error occurred: {e}")
+                return render_template('signup.html', message=f"An error occurred: {str(e)}")
+            finally:
+                db.session.close()  # Ensure session is closed
+        elif action_type == 'login':  # Login form submission
             email = request.form['email']
             password = request.form['password']
 
             user = User.query.filter_by(email=email).first()
-
             if user and user.password == password:
                 session['user_id'] = user.id  # Store user ID in session
                 session['user_name'] = user.name  # Store user name in session
-                return render_template('index.html', message="Login successful!")
+                return redirect(url_for('home'))  # Redirect to home page
             else:
                 return render_template('signup.html', message="Invalid credentials. Please try again.")
-
     return render_template('signup.html')
+
+
+
+
 
 @app.route('/dashboard')
 def dashboard():
@@ -396,7 +410,7 @@ def nutrient_prediction():
 
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=True)
     
 
 
