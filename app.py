@@ -20,6 +20,11 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 import traceback
 
+import subprocess
+import os
+from flask import redirect
+import psutil
+
 #LOADING THE TRAINED MODELS 
 #Loading plant disease classification model
 
@@ -248,6 +253,35 @@ def fertilizer_recommendation():
 def nutrient_deficiency():
     title = 'Crop Sense - Nutrient Deficiency Detection'
     return render_template('nutrient.html', title=title)
+
+def is_port_in_use(port):
+    """Check if a given port is in use."""
+    for conn in psutil.net_connections(kind="inet"):
+        if conn.laddr.port == port:
+            return True
+    return False
+
+@app.route('/webapp')
+def launch_webapp():
+    try:
+        # Ensure the correct path to the webapp directory
+        webapp_path = os.path.abspath(os.path.join(os.getcwd(), 'webapp'))
+        run_script = os.path.join(webapp_path, 'run.py')
+
+        if not os.path.isfile(run_script):
+            return f"Error: Script '{run_script}' does not exist."
+
+        # Ensure port 8080 is not in use
+        if not is_port_in_use(8080):
+            subprocess.Popen(["python", run_script], cwd=webapp_path, shell=True)
+
+        # Redirect to run.py's application
+        return redirect("http://127.0.0.1:8080")
+    except Exception as e:
+        return f"Error launching WebApp: {e}"
+
+
+
 
 
 # render disease prediction input page

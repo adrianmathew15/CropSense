@@ -12,7 +12,7 @@ def ConvBlock(in_channels, out_channels, pool=False):
     return nn.Sequential(*layers)
 
 
-# Model Architecture
+# # Model Architecture
 class ResNet9(nn.Module):
     def __init__(self, in_channels, num_diseases):
         super().__init__()
@@ -39,4 +39,4 @@ class ResNet9(nn.Module):
         out = self.classifier(out)
         return out
     
-    
+
