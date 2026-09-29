@@ -6,3 +6,7 @@ TEST_Project/
 __pycache__/
 New Plant Diseases Dataset(Augmented)/
 Docs/
+.venv/
+webapp/webapp/.venv/
+__pycache__/
+*.pyc

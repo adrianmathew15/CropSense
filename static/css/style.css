@@ -1623,4 +1623,30 @@ a.move-top {
 	
 }
 
+/* Service cards remain in normal flow so a wrapped card cannot overlap the
+   taller card above it. The negative margin keeps the image-overlay effect. */
+.services-grid .blog-grids {
+    margin-bottom: 0;
+    row-gap: 3rem;
+}
+
+.services-grid .service-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.services-grid .service-card > a {
+    display: flex;
+    flex: 1;
+}
+
+.services-grid .blog-info {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: 88%;
+    margin: -2em 6% 0;
+}
+
 /*-- //Responsive design --*/

@@ -89,17 +89,32 @@ def weather_fetch(city_name):
     api_key = config.weather_api_key
     base_url = "http://api.openweathermap.org/data/2.5/weather?"
 
+    weather_fetch.last_error = None
+
+    if not city_name:
+        weather_fetch.last_error = "Please select a city before predicting."
+        return None
+
     complete_url = base_url + "appid=" + api_key + "&q=" + city_name
-    response = requests.get(complete_url)
-    x = response.json()
-    if x["cod"] != "404":
+    try:
+        response = requests.get(complete_url, timeout=10)
+        x = response.json()
+    except requests.RequestException as error:
+        weather_fetch.last_error = f"Could not connect to OpenWeather: {error}"
+        return None
+    except ValueError:
+        weather_fetch.last_error = "OpenWeather returned a response the app could not read."
+        return None
+
+    if str(x.get("cod")) == "200" and "main" in x:
         y = x["main"]
 
         temperature = round((y["temp"] - 273.15), 2)
         humidity = y["humidity"]
         return temperature, humidity
-    else:
-        return None
+
+    weather_fetch.last_error = x.get("message", "OpenWeather did not return temperature and humidity for this city.")
+    return None
 
 def predict_image(img, model=disease_model):
     """
@@ -265,7 +280,9 @@ def is_port_in_use(port):
 def launch_webapp():
     try:
         # Ensure the correct path to the webapp directory
-        webapp_path = os.path.abspath(os.path.join(os.getcwd(), 'webapp'))
+        webapp_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), 'webapp', 'webapp'
+        )
         run_script = os.path.join(webapp_path, 'run.py')
 
         if not os.path.isfile(run_script):
@@ -298,19 +315,31 @@ def crop_prediction():
         K = int(request.form['pottasium'])
         ph = float(request.form['ph'])
         rainfall = float(request.form['rainfall'])
+        temperature_input = request.form.get("temperature")
+        humidity_input = request.form.get("humidity")
 
         # state = request.form.get("stt")
         city = request.form.get("city")
 
-        if weather_fetch(city) != None:
-            temperature, humidity = weather_fetch(city)
+        if temperature_input and humidity_input:
+            temperature = float(temperature_input)
+            humidity = float(humidity_input)
+            data = np.array([[N, P, K, temperature, humidity, ph, rainfall]])
+            my_prediction = crop_recommendation_model.predict(data)
+            final_prediction = my_prediction[0]
+
+            return render_template('crop-result.html', prediction=final_prediction, title=title)
+
+        weather = weather_fetch(city)
+        if weather is not None:
+            temperature, humidity = weather
             data = np.array([[N, P, K, temperature, humidity, ph, rainfall]])
             my_prediction = crop_recommendation_model.predict(data)
             final_prediction = my_prediction[0]
 
             return render_template('crop-result.html', prediction=final_prediction, title=title)
         else:
-            return render_template('try_again.html', title=title)
+            return render_template('try_again.html', title=title, reason=weather_fetch.last_error)
 
 # render fertilizer recommendation result page
 @ app.route('/fertilizer-predict', methods=['POST'])
