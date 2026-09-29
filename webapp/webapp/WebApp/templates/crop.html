@@ -1,0 +1,290 @@
+{% extends "layout.html" %}
+
+{% block head %}
+    <style type="text/css">
+        html, body {
+          width: 100%;
+          height: 100%;
+          margin: 0;
+          padding: 0;
+        }
+
+        #Map {
+          position: relative;
+          width: 50.0%;
+          height: 65.0%;
+          left: 0.0%;
+          top: 0.0%;
+        }
+
+    </style>
+              
+{% endblock %}
+
+{% block content %}
+    <div class="content-section">
+        <form id="form" method="POST" action="">
+            {{ form.hidden_tag() }}
+            <fieldset class="form-group">
+                <legend class="border-bottom mb-4">Register a New Crop Field</legend>
+                <div class="form-group">
+                    {{ form.name.label(class="form-control-label", style="white-space: nowrap;") }}
+                    {% if form.name.errors %} 
+                        {{ form.name(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.name.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ form.name(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.croptype.label(class="form-control-label") }}
+                    {% if form.croptype.errors %} 
+                        {{ form.croptype(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.croptype.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ form.croptype(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">   
+                
+                    Please select your crop field in the map using polygon tool
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pentagon-fill" viewBox="0 0 16 16">
+                      <path d="M7.685.256a.5.5 0 0 1 .63 0l7.421 6.03a.5.5 0 0 1 .162.538l-2.788 8.827a.5.5 0 0 1-.476.349H3.366a.5.5 0 0 1-.476-.35L.102 6.825a.5.5 0 0 1 .162-.538l7.42-6.03Z"/>
+                    </svg>
+                    <br>
+                    <div class="folium-map" id="Map" ></div>
+                </div>             
+                <div class="form-group">
+                    {{ form.sowdate.label(class="form-control-label") }}
+                    {% if form.sowdate.errors %}
+                        {{ form.sowdate(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.sowdate.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ form.sowdate(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.harvestdate.label(class="form-control-label") }}
+                    {% if form.harvestdate.errors %}
+                        {{ form.harvestdate(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.harvestdate.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ form.harvestdate(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.productexpected.label(class="form-control-label", style="white-space: nowrap;") }}
+                    {% if form.productexpected.errors %}
+                        {{ form.productexpected(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in form.productexpected.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ form.productexpected(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                
+            </fieldset>
+            <div class="form-group">
+                {{ form.submit(class="btn btn-outline-info", id="submit") }}
+            </div>
+
+        </form>
+        <div class="form-group">
+            <a class="btn btn-outline-info" href="{{ url_for('main.insert_soiltest') }}" id="buttonsoil" role="button" >Register a Soil Test</a>
+            <a class="btn btn-outline-info" href="{{ url_for('main.insert_historical_data') }}" id="buttonhistoric" role="button" >Register a Historic Data</a>
+        </div>        
+        <script>
+            
+            const formEl = document.getElementById('form');
+            
+            var Map = L.map("Map").setView([-24, -55], 6);
+              
+            var tile_layer_openstreetmap = L.tileLayer(
+            	"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    {"attribution": "&copy; OpenStreetMap contributors", "maxNativeZoom": 19, "maxZoom": 19}
+            ).addTo(Map);
+              
+            var tile_layer_google_maps = L.tileLayer(
+            	"https://mt1.google.com/vt/lyrs=m\u0026x={x}\u0026y={y}\u0026z={z}",{
+                    "attribution": "Google", 
+                    "detectRetina": false, 
+                    "maxNativeZoom": 22, 
+                    "maxZoom": 22, 
+                    "minZoom": 0, 
+                    "noWrap": false, 
+                    "opacity": 1, 
+                    "subdomains": "abc", 
+                    "tms": false}
+            );
+              
+            var tile_layer_google_satellite = L.tileLayer(
+            	"https://mt1.google.com/vt/lyrs=y\u0026x={x}\u0026y={y}\u0026z={z}",{
+                    "attribution": "Google", 
+                    "detectRetina": false, 
+                    "maxNativeZoom": 22, 
+                    "maxZoom": 22, 
+                    "minZoom": 0, 
+                    "noWrap": false, 
+                    "opacity": 1, 
+                    "subdomains": "abc", 
+                    "tms": false}
+            );
+              
+            var layer_control = {
+                base_layers : {
+                    "OpenStreetMap" : tile_layer_openstreetmap,
+                    "Google Maps" : tile_layer_google_maps,
+                    "Google Satellite" : tile_layer_google_satellite,
+                },
+                overlays : {},
+            };
+              
+            L.control.layers(
+            	layer_control.base_layers,
+                    layer_control.overlays,
+                    {"autoZIndex": true, "collapsed": true, "position": "topright"}
+            ).addTo(Map);
+                        
+            var drawnItems = new L.featureGroup().addTo(Map);
+
+            var isDrawingPolygon = false;
+            var polygonPoints = [];
+            var polygonPreview = null;
+            var polygonButton = null;
+            var selectedPolygonCoordinates = null;
+
+            function handlePolygonMapClick(e) {
+                polygonPoints.push(e.latlng);
+                if (!polygonPreview) {
+                    polygonPreview = L.polyline(polygonPoints, {
+                        color: "#3388ff",
+                        weight: 3,
+                        dashArray: "6, 6"
+                    }).addTo(Map);
+                } else {
+                    polygonPreview.setLatLngs(polygonPoints);
+                }
+            }
+
+            function finishPolygon(button) {
+                if (polygonPoints.length < 3) {
+                    alert("Select at least three points to create a polygon.");
+                    return false;
+                }
+
+                Map.off("click", handlePolygonMapClick);
+                if (polygonPreview) {
+                    Map.removeLayer(polygonPreview);
+                }
+
+                selectedPolygonCoordinates = polygonPoints.map(function(point) {
+                    return [point.lng, point.lat];
+                });
+                selectedPolygonCoordinates.push(selectedPolygonCoordinates[0].slice());
+
+                L.polygon(polygonPoints, {
+                    color: "#3388ff",
+                    fillOpacity: 0.25
+                }).addTo(drawnItems);
+
+                isDrawingPolygon = false;
+                polygonPoints = [];
+                polygonPreview = null;
+                Map.getContainer().style.cursor = "";
+                button.style.backgroundColor = "white";
+                button.title = "Draw a crop-field polygon";
+                return true;
+            }
+
+            var PolygonControl = L.Control.extend({
+                options: { position: "topleft" },
+                onAdd: function() {
+                    var container = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+                    var button = L.DomUtil.create("a", "crop-polygon-control", container);
+                    polygonButton = button;
+                    button.href = "#";
+                    button.innerHTML = "&#11039;";
+                    button.title = "Draw a crop-field polygon";
+                    button.setAttribute("role", "button");
+                    button.setAttribute("aria-label", "Draw a crop-field polygon");
+                    button.style.fontSize = "24px";
+                    button.style.lineHeight = "30px";
+                    button.style.textAlign = "center";
+
+                    L.DomEvent.disableClickPropagation(container);
+                    L.DomEvent.on(button, "click", function(e) {
+                        L.DomEvent.preventDefault(e);
+
+                        if (isDrawingPolygon) {
+                            finishPolygon(button);
+                            return;
+                        }
+
+                        drawnItems.clearLayers();
+                        selectedPolygonCoordinates = null;
+                        polygonPoints = [];
+                        isDrawingPolygon = true;
+                        Map.getContainer().style.cursor = "crosshair";
+                        button.style.backgroundColor = "#bde0ff";
+                        button.title = "Click here again to finish the polygon";
+                        Map.on("click", handlePolygonMapClick);
+                    });
+
+                    return container;
+                }
+            });
+
+            new PolygonControl().addTo(Map);
+            
+            formEl.addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                // Treat form submission as "finish polygon" when the user
+                // has already selected at least three map points.
+                if (isDrawingPolygon && !finishPolygon(polygonButton)) {
+                    return;
+                }
+
+                if (!selectedPolygonCoordinates) {
+                   alert("Define a coordinate with the polygon tool");
+                    return;
+                }
+
+                var coord_geojson = JSON.stringify([selectedPolygonCoordinates], undefined, 2);
+                
+                const formData = new FormData(formEl);
+                formData.append('coordinates', coord_geojson);
+                const data = Object.fromEntries(formData.entries());
+                
+                console.log(JSON.stringify(data));
+                fetch('/newfarmland', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data),
+                });
+            });
+          
+        </script>
+
+    </div>    
+
+{% endblock %}

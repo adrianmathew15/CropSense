@@ -10,3 +10,9 @@ Docs/
 webapp/webapp/.venv/
 __pycache__/
 *.pyc
+
+.venv/
+webapp/webapp/.venv/
+webapp/webapp/.env
+__pycache__/
+*.pyc
